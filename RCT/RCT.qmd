@@ -1,8 +1,8 @@
 ---
-title: "Quantitative Impact Evaluation: Econometric Foundations, Experimental Design, and Statistical Workflows in R"
-subtitle: "ECO501185 Course Review & Applied Analytical Blueprint"
-author: "Master's Study Group in Impact Evaluation"
-date: "2026-09-17"
+title: "Impact Evaluation: Econometric Foundations, Experimental Design, and Statistical Workflows in R"
+subtitle: "ECO501185 - Buổi 5"
+author: "Thanh"
+date: "2026-09-16"
 format:
   pdf:
     toc: true
@@ -20,7 +20,17 @@ execute:
   eval: true
   warning: false
   message: false
+
+knitr:
+  opts_chunk:
+    dev: "cairo_pdf"
 ---
+
+**GVHD:** TS Lương Vinh Quốc Duy
+
+\newpage
+
+------------------------------------------------------------------------
 
 # Introduction & Study Overview
 
@@ -109,7 +119,7 @@ Selection bias arises because baseline counterfactual outcomes $E[Y_0 \vert{} P=
 Evaluators face a structural trade-off between two forms of validity\[cite: 1\]:
 
 | Validity Type | Vietnamese Term | Formal Definition | Core Threat | Methodological Guarantee |
-|---------------|---------------|---------------|---------------|---------------|
+|----|----|----|----|----|
 | **Internal Validity**\[cite: 1\] | *Tính hiệu lực bên trong*\[cite: 1\] | Extent to which the estimated effect is truly causal for the study sample, free from unobserved confounders or selection bias\[cite: 1\]. | Selection bias, endogeneity, unobserved heterogeneity\[cite: 1\]. | **Stage 2 Random Assignment** into treatment ($P=1$) vs control ($P=0$)\[cite: 1\]. |
 | **External Validity**\[cite: 1\] | *Tính hiệu lực bên ngoài*\[cite: 1\] | Extent to which the study sample's estimated causal impact can be generalized to broader populations, settings, or time periods\[cite: 1\]. | Convenience sampling, voluntary participation bias, small non-representative samples\[cite: 1\]. | **Stage 1 Random Sampling** from the global target population ($X$)\[cite: 1\]. |
 

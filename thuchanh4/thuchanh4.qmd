@@ -1,5 +1,5 @@
 ---
-title: "Bài thực hành 4"
+title: "Impact Evaluation: Bài thực hành 4 - Buổi 6"
 subtitle: "Môn học Đánh giá tác động các chương trình và dự án"
 
 author:
@@ -20,6 +20,10 @@ execute:
   eval: true
   warning: false
   message: false
+
+knitr:
+  opts_chunk:
+    dev: "cairo_pdf"
 ---
 
 **GVHD:** TS Lương Vinh Quốc Duy

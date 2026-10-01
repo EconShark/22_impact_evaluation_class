@@ -1,10 +1,16 @@
 ---
-title: "Quantitative Impact Evaluation: IV"
-subtitle: "ECO501185"
-author: "Master's Study Group in Impact Evaluation"
-date: "2026-09-17"
+title: "Impact Evaluation: Instrumental Variables (IV & 2SLS)"
+subtitle: "ECO501185 - Buổi 7"
+author: "Thanh"
+date: "2026-09-30"
+
 format:
   pdf:
+    include-in-header:
+      text: |
+        \usepackage{tikz}
+        \usetikzlibrary{positioning}
+
     toc: true
     toc-depth: 3
     number-sections: true
@@ -16,66 +22,353 @@ format:
       - left=25mm
       - right=25mm
       - bottom=25mm
+
 execute:
   eval: true
   warning: false
   message: false
+  
+knitr:
+  opts_chunk:
+    dev: "cairo_pdf"
 ---
+**GVHD:** TS Lương Vinh Quốc Duy
 
-# 
+\newpage
 
-# IV
+------------------------------------------------------------------------
 
-```{r}
-install.packages("ivreg",dependencies = 1)
+# Khung Lý Thuyết Biến Công Cụ (Instrumental Variables)
+
+## Bản Chất & Nguyên Nhân Của Hiện Tượng Nội Sinh (Endogeneity)
+
+Trong các khuyết tật của mô hình hồi quy (Đa cộng tuyến, Phương sai thay đổi, Tự tương quan, Nội sinh), **Hiện tượng nội sinh (Endogeneity)** được xem là căn bệnh nguy hiểm nhất. Nếu không xử lý triệt để, hệ số ước lượng OLS sẽ bị thiên lệch (biased), chệch hướng và làm sai lệch hoàn toàn giá trị $p$-value cũng như các hàm ý chính sách.
+
+Trong đánh giá tác động thực nghiệm, các chương trình phát triển (như tín dụng vi mô, đào tạo nghề, bảo hiểm y tế) thường dựa trên **sự tham gia tự nguyện** (*voluntary participation*) của đối tượng thụ hưởng.
+
+Xét mô hình hồi quy tác động dạng OLS chuẩn:
+
+$$Y_i = \alpha + \beta T_i + \gamma X_i + \varepsilon_i$$
+
+Trong đó:
+
+- $Y_i$: Biến kết quả đánh giá (ví dụ: Tài sản bình quân đầu người).
+- $T_i$: Biến giả chỉ trạng thái tham gia chương trình ($1 =$ Có tham gia, $0 =$ Không tham gia).
+- $X_i$: Các biến kiểm soát quan sát được (Tuổi, học vấn của chủ hộ).
+- $\varepsilon_i$: Sai số ngẫu nhiên chứa các yếu tố không quan sát được (Động lực làm giàu, năng lực quản lý, sự nhạy bén kinh doanh...).
+
+Khi sự tham gia là tự nguyện, những người nghèo có động lực làm giàu cao hơn, năng nổ hơn hoặc có năng lực quản lý tốt hơn sẽ tích cực đăng ký tham gia chương trình ($T_i = 1$). Do đó, các đặc điểm không quan sát được này nằm trong sai số $\varepsilon_i$ và đồng thời tương quan với quyết định tham gia $T_i$:
+
+$$\text{Cov}(T_i, \varepsilon_i) \neq 0$$
+
+Hiện tượng vi phạm giả định $E[\varepsilon_i \vert{} T_i] = 0$ này gây ra hiện tượng **thiên lệch do lựa chọn (selection bias)**. Kết quả ước lượng OLS sẽ bị thiên lệch và không nhất quán ($\mathbb{E}[\hat{\beta}_{\text{OLS}}] \neq \beta$).
+
+------------------------------------------------------------------------
+
+## Phương Pháp Biến Công Cụ (IV) & Hồi Quy Hai Giai Đoạn (2SLS)
+
+Để giải quyết triệt để hiện tượng nội sinh, phương pháp **Biến công cụ (Instrumental Variable - IV)** sử dụng một biến ngoại sinh $Z_i$ bên ngoài mô hình nhằm bóc tách phần biến thiên ngẫu nhiên (exogenous variation) của $T_i$.
+
+### Hai Điều Kiện Bắt Buộc Của Biến Công Cụ (Valid Instrument):
+
+1.  **Tính tương quan (Instrument Relevance):** Biến công cụ $Z_i$ phải có tác động mạnh đến quyết định tham gia $T_i$: $$\text{Cov}(Z_i, T_i) \neq 0$$
+2.  **Ràng buộc loại trừ (Exclusion Restriction):** $Z_i$ hoàn toàn không tương quan với sai số $\varepsilon_i$ và không tác động trực tiếp lên biến kết quả $Y_i$ (chỉ tác động gián tiếp thông qua kênh $T_i$): $$\text{Cov}(Z_i, \varepsilon_i) = 0$$
+
+### Sơ Đồ Luồng Tác Động Của Biến Công Cụ:
+
+```{=latex}
+\begin{center}
+\begin{tikzpicture}[
+    node distance = 2cm,
+    every node/.style = {align=center},
+    var/.style = {draw, rectangle, rounded corners=3pt, inner sep=6pt, font=\bfseries, fill=blue!5},
+    unobs/.style = {draw, rectangle, dashed, inner sep=6pt, font=\bfseries, fill=gray!10},
+    arrow/.style = {->, >=stealth, line width=1pt},
+    blocked/.style = {->, >=stealth, red!80!black, line width=1pt, dashed}
+]
+
+% --- NODES ---
+\node[var] (z) {$Z_i$\\ \small\normalfont Đường ô tô};
+\node[var, right = 2 of z] (t) {$T_i$\\ \small\normalfont Tham gia tín dụng};
+\node[var, right = 2 of t] (y) {$Y_i$\\ \small\normalfont Tài sản bình quân};
+\node[unobs, above = 1.2 of t] (u) {$U_i$\\ \small\normalfont Yếu tố không quan sát\\ \tiny\normalfont (Năng lực, động lực)};
+
+% --- EDGES ---
+% Causal / Valid Paths
+\draw[arrow] (z) -- node[above, font=\small] {Giai đoạn 1} (t);
+\draw[arrow] (t) -- node[above, font=\small] {Giai đoạn 2} (y);
+\draw[arrow] (u) -- (t);
+\draw[arrow] (u) -- (y);
+
+% Blocked Paths (Assumptions)
+\draw[blocked] (u) -- node[midway, fill=white, font=\bfseries\color{red!80!black}] {X} (z);
+\draw[blocked] (z) to [out=270, in=270, looseness=0.5] 
+    node[midway, fill=white, font=\bfseries\color{red!80!black}] {X} 
+    node[below=2pt, font=\small\color{red!80!black}] {Ràng buộc loại trừ ($Z_i \nrightarrow Y_i$)} (y);
+
+\end{tikzpicture}
+\end{center}
 ```
 
-```{r}
-library(ivreg)
-library(readxl)
+### Cơ Chế Hồi Quy Hai Giai Đoạn (Two-Stage Least Squares - 2SLS):
 
-df <- read_excel("data_demo.xls", sheet = "Data 1998")
-```
+- **Giai đoạn 1 (First Stage):** Hồi quy biến nội sinh $T_i$ theo biến công cụ $Z_i$ và các biến kiểm soát $X_i$ để tính giá trị dự báo $\hat{T}_i$: $$T_i = \alpha_0 + \alpha_1 Z_i + \alpha_2 X_i + u_i \implies \text{Tính giá trị dự báo } \hat{T}_i$$
+- **Giai đoạn 2 (Second Stage):** Hồi quy biến kết quả $Y_i$ theo giá trị dự báo $\hat{T}_i$ và các biến kiểm soát $X_i$: $$Y_i = \beta_0 + \beta_1 \hat{T}_i + \beta_2 X_i + \varepsilon_i$$
+
+Hệ số $\hat{\beta}_1$ thu được từ giai đoạn 2 là ước lượng không thiên lệch của tác động chính sách (LATE - Local Average Treatment Effect).
+
+------------------------------------------------------------------------
+
+# Thực hành Dữ Liệu Tín Dụng Vi Mô Nam Á Trong R
 
 Tập tin "Data_demo.xls" chứa dữ liệu được thu thập từ chương trình tín dụng vi mô được thực hiện ở một quốc gia ở Nam Á. Chương trình tín dụng vi mô bao gồm hai thành phần: tín dụng vi mô cho nam và tín dụng vi mô cho phụ nữ. Chương trình tín dụng vi mô được thực hiện dựa trên sự tham gia tự nguyện của các hộ nghèo nông thôn. Giả sử đơn vị quản lý đã thống nhất về việc áp dụng biến công cụ để đánh giá tác động. Năm đánh giá tác động là 1998. Ước tính tác động của tín dụng vi mô đối với các đối tượng thụ hưởng với các thông tin sau:
 
-Y: giá trị tài sản hộ gia đình bình quân/người
-
-T: biến nhóm (1: nhóm có tham gia dự án tín dụng vi mô dành cho nam hoặc cho nữ)
-
-X: tuổi, trình độ học vấn của chủ hộ
-
-Z: nên chọn biến nào?
+Y: giá trị tài sản hộ gia đình bình quân/người T: biến nhóm (1: nhóm có tham gia dự án tín dụng vi mô dành cho nam hoặc cho nữ) X: tuổi, trình độ học vấn của chủ hộ Z: nên chọn biến nào?
 
 Lưu ý: Đối tượng thụ hưởng bao gồm những người tham gia dự án tín dụng vi mô cho nam hoặc dự án tín dụng vi mô cho nữ. Những người không thụ hưởng bao gồm những người không tham gia vào BẤT KỲ dự án tín dụng vi mô nào.
 
+## Dữ Liệu (`Data_demo.xls`)
+
+Dữ liệu được trích từ nghiên cứu của Ngân hàng Thế giới (World Bank) thu thập năm 1998 về chương trình tín dụng vi mô ở Nam Á gồm 2 hợp phần: tín dụng dành cho Nam (`credit_m`) và tín dụng dành cho Nữ (`credit_f`).
+
+- **Biến phụ thuộc (**$Y$): Giá trị tài sản bình quân đầu người ($\text{taisanbinhquan} = \text{hhasset} / \text{famsize}$).
+- **Biến công cụ (**$Z$): Yếu tố hạ tầng làng xã như xã có đường ô tô chạy vào được hay không (`vaccess`). Yếu tố này quyết định việc ngân hàng mở chi nhánh tín dụng ($Z \rightarrow T$), nhưng không trực tiếp quyết định tài sản riêng của từng hộ nghèo ($Z \not\rightarrow Y$).
+
+## Khai Báo Thư Viện & Nạp Dữ Liệu
+
 ```{r}
-df$taisanbinhquan <- df$hhasset/df$famsize
-hist(df$taisanbinhquan)
+# 1. Cài đặt gói ivreg (chạy 1 lần nếu chưa có)
+# install.packages("ivreg", dependencies = TRUE)
+
+# 2. Khai báo các thư viện cần thiết
+library(ivreg)   # Cung cấp hàm ivreg() cho mô hình 2SLS/IV
+library(readxl)  # Đọc dữ liệu Excel (.xls / .xlsx)
+
+# 3. Đọc dữ liệu sheet "Data 1998"
+df <- read_excel("data_demo.xls", sheet = "Data 1998")
+
+# Inspect kích thước dữ liệu
+cat("Số quan sát:", nrow(df), "hộ gia đình | Số biến:", ncol(df), "\n")
+
+```
+
+## Biến Đổi Dữ Liệu & Kiểm Tra Phân Phối
+
+Do dữ liệu tài sản thực tế thường bị lệch phải (right-skewed), ta tiến hành lấy logarithm tự nhiên ($\ln$) biến tài sản bình quân đầu người để đưa về phân phối chuẩn, giúp thỏa mãn tốt hơn các giả định hồi quy.
+
+```{r}
+# Tạo biến Tài sản bình quân đầu người
+df$taisanbinhquan <- df$hhasset / df$famsize
+
+# Vẽ biểu đồ phân phối tài sản gốc
+hist(df$taisanbinhquan,
+     main = "Phân phối Tài sản Bình quân Đầu người (Gốc)",
+     xlab = "Tài sản (Đơn vị tiền tệ)",
+     col = "lightblue", border = "white")
+
+# Lấy log tự nhiên biến tài sản
 df$ln_taisanbinhquan <- log(df$taisanbinhquan)
-hist(df$ln_taisanbinhquan)
+
+# Vẽ biểu đồ phân phối Log Tài sản
+hist(df$ln_taisanbinhquan,
+     main = "Phân phối Log Tài sản Bình quân Đầu người",
+     xlab = "ln(Tài sản bình quân)",
+     col = "darkseagreen", border = "white")
 
 ```
 
-Giả sử hộ nam
+------------------------------------------------------------------------
+
+# Ước Lượng Mô Hình Biến Công Cụ (2SLS) & Kiểm Định
+
+## Cú Pháp Lệnh `ivreg()` Trong R
+
+Cú pháp của gói `ivreg` chia làm 3 phần ngăn cách bởi dấu gạch đứng `|`:
+
+$$\text{ivreg}(Y \sim X_{\text{controls}} \mid T_{\text{endogenous}} \mid Z_{\text{instruments}}, \text{data} = \text{df})$$
+
+Trong đó:
+
+- $Y$: `ln_taisanbinhquan` (Log tài sản bình quân đầu người).
+- $X$: `agehead` (Tuổi chủ hộ), `educhead` (Số năm đi học của chủ hộ).
+- $T$: `credit_m` (Biến giả: $1 =$ Hộ có vay tín dụng vi mô nam, $0 =$ Không vay).
+- $Z$: `vaccess` (Biến giả: $1 =$ Xã có đường ô tô chạy vào được).
 
 ```{r}
-modelling <- ivreg(ln_taisanbinhquan~agehead+educhead|credit_m|vaccess, data=df)
-summary(modelling)
+# Chạy mô hình Hồi quy Biến công cụ 2SLS cho hợp phần tín dụng Nam
+modelling <- ivreg(ln_taisanbinhquan ~ agehead + educhead | credit_m | vaccess, data = df)
+
+# Hiển thị bảng kết quả hồi quy và các kiểm định chẩn đoán (Wu-Hausman)
+summary(modelling, diagnostics = TRUE)
+
 ```
 
-Kiểm định Wu-Hausman
+------------------------------------------------------------------------
 
-```         
-Wu-Hausman          1 1124     3.423  0.0646 . 
+# Quy Trình Đọc Kết Quả & Diễn Giải Chi Tiết
+
+## Quy Trình 2 Bước Đọc Kết Quả Hồi Quy IV
+
+Quy tắc vàng khi thực hành mô hình IV:
+
+1.  **Bước 1 — Đọc Kiểm định Wu-Hausman trước:**
+
+- $H_0$: Biến $T$ là ngoại sinh (OLS hiệu quả hơn IV).
+- $H_1$: Biến $T$ là nội sinh (Cần thiết phải dùng 2SLS/IV).
+- **Nếu** $p$-value $< 0.10$ ($10\%$): Bác bỏ $H_0 \implies$ Hiện tượng nội sinh tồn tại, bắt buộc chọn mô hình 2SLS (IV).
+- **Nếu** $p$-value $> 0.10$: Không bác bỏ $H_0 \implies$ Không phát hiện nội sinh, OLS vẫn là lựa chọn tốt hơn.
+
+2.  **Bước 2 — Đọc hệ số hồi quy chính (**$\beta_1$): Chỉ khi kiểm định Wu-Hausman đạt yêu cầu mới quay lên đọc hệ số và $p$-value của biến tác động $T$.
+
+------------------------------------------------------------------------
+
+## Diễn Giải Đầu Ra Từ R
+
+### Phân Tích Kiểm Định Wu-Hausman (Diagnostic Test)
+
+Kết quả từ lệnh `summary(modelling, diagnostics = TRUE)`:
+
+``` text
+Diagnostic tests:
+                  df1  df2 statistic p-value  
+Weak instruments    1 1125     0.456  0.4994  
+Wu-Hausman          1 1124     3.423  0.0646 .
+Sargan              0   NA        NA      NA  
 ```
 
-P-value \< 10% -\> Chọn 2SLS
+- **Giả thuyết thống kê:**
 
-```         
+- $H_0$: Biến `credit_m` là ngoại sinh.
+
+- $H_1$: Biến `credit_m` là nội sinh.
+
+- **Diễn giải:** Giá trị $p$-value $= 0.0646 < 0.10$ ($6.46\% < 10\%$).
+
+- **Kết luận:** Bác bỏ giả thuyết $H_0$ ở mức ý nghĩa $10\%$. Tồn tại hiện tượng nội sinh giữa quyết định vay vốn và các đặc điểm không quan sát được. Do đó, việc sử dụng mô hình Biến công cụ (2SLS) là bắt buộc và kết quả thu được đáng tin cậy hơn OLS.
+
+### Diễn Giải Bảng Hệ Số Hồi Quy Tác Động
+
+Trích xuất kết quả các hệ số:
+
+``` text
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept)  3.81080    6.13534   0.621    0.535
 credit_m    13.23598   21.25501   0.623    0.534
+agehead      0.05043    0.05132   0.983    0.326
+educhead     0.05150    0.14703   0.350    0.726
 ```
 
-p-value \> 10%
+- **Biến trọng tâm `credit_m`:**
 
-Không có sự khác biệt trong tsbqdn giữa nhóm hộ có vay tdqm_nam và hộ không có vay tdqm_nam, đôi khi không có tín hiệu xấu
+- Hệ số ước lượng $\hat{\beta}_{\text{credit\_m}} = 13.23598$.
+
+- Giá trị $p$-value $= 0.534 > 0.10$ ($53.4\% > 10\%$).
+
+- **Ý nghĩa kinh tế & chính sách:**
+
+- Vì $p$-value $= 0.534 > 0.10$, hệ số hồi quy không có ý nghĩa thống kê ở các mức $1\%, 5\%, 10\%$.
+
+- **Kết luận chính sách:** Chưa có bằng chứng thống kê cho thấy sự khác biệt có ý nghĩa về mức tài sản bình quân đầu người giữa hộ gia đình có vay tín dụng vi mô nam và hộ không vay.
+
+- **Ghi chú giảng viên:** Việc kết quả không có ý nghĩa thống kê không phải là "kết quả xấu", mà nó phản ánh trung thực thực tế thực nghiệm rằng chương trình tín dụng dành cho nam chưa tạo ra bứt phá vượt trội về tích lũy tài sản so với nhóm đối chứng, qua đó hỗ trợ nhà quản lý điều chỉnh thiết kế chương trình.
+
+### Góc Nhìn Về Giá Trị p-value Trong Đánh Giá Tác Động
+
+> **Bài giảng Thầy Duy:** Trong đánh giá tác động, một kết quả "không có ý nghĩa thống kê" không phải là sự thất bại của nghiên cứu, mà là thành công trong việc tìm ra sự thật thực nghiệm — giúp chính phủ không lãng phí ngân sách vào các thiết kế chính sách kém hiệu quả.
+
+#### Góc Nhìn Thống Kê & Kinh Tế Lượng: Dữ Liệu Cắt Ngang Làm Được Gì Và Không Làm Được Gì?
+
+##### Điều dữ liệu cắt ngang tại thời điểm $t$ LÀM ĐƯỢC:
+
+- Nếu biến công cụ $Z$ thỏa mãn các giả định (Valid IV) hoặc trong một thử nghiệm ngẫu nhiên (RCT), dữ liệu cắt ngang 1 thời điểm tại $t$ cho ta **ước lượng không thiên lệch về tác động nhân quả tại** $t$ ($E[Y_{1t} - Y_{0t} \mid \text{Compliers}]$).
+- **Nếu kết quả IV có ý nghĩa thống kê (**$p < 0.10$): Kết luận chắc chắn chính sách đã làm thay đổi biến kết quả tại $t$. **Không cần** dữ liệu thời điểm gốc ($t_0$) vẫn đủ căn cứ khẳng định chính sách thành công.
+- **Tại sao?** Vì IV hợp lệ đã triệt tiêu thiên lệch do lựa chọn (*selection bias*), tách lọc ra phần biến thiên ngoại sinh của $T$ tại thời điểm $t$.
+
+##### Điều dữ liệu cắt ngang tại thời điểm $t$ KHÔNG LÀM ĐƯỢC:
+
+- Dữ liệu 1 thời điểm không thể cho ta biết **điểm xuất phát và quỹ đạo tăng trưởng** ($\Delta Y = Y_t - Y_0$).
+- Hạn chế này xuất hiện khi kết quả tại $t$ **KHÔNG có ý nghĩa thống kê (**$p > 0.10$), đúng như trường hợp `credit_m` trong bài học:
+
+| Kịch bản tại $T = 1998$ | Dữ liệu $T=1998$ quan sát được | Diễn biến thực tế từ $T=1991$ đến $1998$ | Kết luận chính sách |
+|:-----------------|:-----------------|:-----------------|:-----------------|
+| **Kịch bản A (Zero Impact)** | Nhóm vay $=$ Nhóm không vay ($p > 0.10$) | Cả 2 nhóm cùng xuất phát ở \$100M (1991) và dừng ở \$100M (1998). | Chương trình **không có tác động**. |
+| **Kịch bản B (Catch-up Effect)** | Nhóm vay $=$ Nhóm không vay ($p > 0.10$) | Nhóm vay xuất phát ở \$20M (1991) tăng lên \$100M (1998); Nhóm không vay giữ nguyên \$100M. | Chương trình có **tác động bắt kịp cực lớn** (+ \$80M). |
+
+> **Thực chất vấn đề:** Mô hình IV cắt ngang chỉ thấy mức tài sản ngang nhau tại $T=1998$. Nó khẳng định **mức tài sản hiện tại không khác biệt**, nhưng không thể phân biệt được equality đó do Kịch bản A hay Kịch bản B tạo ra nếu thiếu dữ liệu $t_0$.
+
+------------------------------------------------------------------------
+
+#### Góc Nhìn Đánh Giá Tác Động: "Hiệu Ứng Bắt Kịp" (Catch-up Effect)
+
+Dưới góc độ thực nghiệm, kết luận *"chưa có sự khác biệt về mức tài sản tại* $T=1998$" đôi khi lại là một **tín hiệu tích cực (tin tốt)**:
+
+> *"Biết đâu 7 năm trước đó (năm gốc 1991), nhóm hộ gia đình nộp đơn vay tín dụng nam vốn có mức tài sản xuất phát điểm thấp hơn rất nhiều so với nhóm hộ không vay?"*
+
+- **Bối cảnh thực tế:** Trong các chương trình giảm nghèo, hộ tự nguyện xin vay vốn thường là những hộ cực nghèo hoặc thiếu hụt tài sản trầm trọng ở thời điểm ban đầu ($Time = 0$).
+- **Tác động thực sự:** Sau 7 năm triển khai, nếu tài sản của nhóm vay vốn vươn lên đạt mức **tương đương (không còn khác biệt)** với nhóm đối chứng (vốn có xuất phát điểm cao hơn), thì đó chính là một **sự cải thiện vượt bậc (Catch-up Effect)**.
+- Nếu chỉ đánh giá máy móc theo $p$-value mà không xem xét diễn biến động, người nghiên cứu sẽ bỏ qua nỗ lực thu hẹp khoảng cách giàu nghèo của chính sách.
+
+------------------------------------------------------------------------
+
+#### Tổng Kết Khung Phương Pháp Đánh Giá Tác Động (Methodology Checklist)
+
+Tùy thuộc vào cấu trúc dữ liệu thu thập được, các phương pháp kinh tế lượng xử lý dữ liệu thời điểm gốc ($t_0$) như sau:
+
+##### Nhóm phương pháp chỉ cần dữ liệu tại $1$ thời điểm ($t$):
+
+- **RCT (Thử nghiệm ngẫu nhiên hóa):** Phân bổ ngẫu nhiên đảm bảo tính tương đồng ở thời điểm ban đầu.
+- **Cross-Sectional IV / 2SLS (Biến công cụ cắt ngang):** Dùng biến công cụ $Z$ để làm sạch hiện tượng nội sinh tại thời điểm $t$.
+- **RDD (Thực nghiệm gián đoạn):** So sánh các đơn vị ngay sát trên và dưới ngưỡng can thiệp tại $t$.
+- *Thước đo:* Đo lường tác động lên **Mức độ (Levels)** tại $t$ ($E[Y_{1t} - Y_{0t}]$).
+
+##### Nhóm phương pháp BẮT BUỘC cần dữ liệu $2$ thời điểm ($t_0$ và $t_1$):
+
+- **DID (Khác biệt trong Khác biệt):** So sánh sự thay đổi theo thời gian của nhóm can thiệp so với nhóm đối chứng ($\Delta Y_{\text{treated}} - \Delta Y_{\text{control}}$).
+- **Panel IV (Biến công cụ dữ liệu bảng):** Kết hợp IV với DID trên dữ liệu nhiều thời kỳ.
+- *Thước đo:* Đo lường tác động lên **Tốc độ tăng trưởng / Sự thay đổi theo thời gian (**$\Delta Y$).
+
+------------------------------------------------------------------------
+
+#### Góc Nhìn Quản Lý & Điều Chỉnh Chính Sách (Policy Adjustments)
+
+Mục đích tối thượng của Đánh giá Tác động (*Impact Evaluation*) không phải là để "khoe" dự án luôn thành công, mà là cung cấp bằng chứng khách quan cho nhà làm chính sách:
+
+- **So sánh Tín dụng Nam (`credit_m`) và Tín dụng Nữ (`credit_f`):** Thực tế nghiên cứu của World Bank tại Nam Á cho thấy tiền vay trao cho phụ nữ thường tạo ra tác động rõ rệt hơn đến dinh dưỡng, giáo dục con cái và tích lũy tài sản hộ gia đình.
+- **Điều chỉnh thiết kế chính sách:** Việc tín dụng nam chưa tạo ra bứt phá tài sản vượt trội là cơ sở để các cơ quan quản lý:
+  1.  **Chuyển dịch trọng tâm ngân sách:** Ưu tiên mở rộng các gói tín dụng vi mô cho phụ nữ.
+  2.  **Tái thiết kế hạ tầng hỗ trợ:** Thay vì chỉ phát tiền vay cho nam giới, chương trình cần tích hợp thêm các hoạt động bắt buộc về đào tạo kỹ năng quản lý tài chính, tư vấn phương án kinh doanh và giám sát mục tiêu sử dụng vốn.
+
+# Thảo Luận Mở Rộng & Luyện Tập
+
+## Xây Dựng Nhóm So Sánh Sạch (Clean Comparison Group)
+
+Khi phân nhóm bằng biến `credit_m`, nhóm `credit_m = 0` vẫn có thể chứa những hộ gia đình tham gia dự án tín dụng vi mô dành cho nữ (`credit_f = 1`). Để tạo nhóm so sánh "sạch" hoàn toàn (không tham gia BẤT KỲ dự án tín dụng nào), ta nên tạo biến giả kết hợp $T_{\text{combined}} = 1$ nếu hộ vay `credit_m` hoặc `credit_f`, và $0$ nếu hoàn toàn không vay.
+
+## Hạn Chế Của LATE (Local Average Treatment Effect)
+
+Ước lượng IV chỉ đo lường tác động đối với nhóm **Compliers** (những hộ gia đình quyết định vay vốn vì địa phương họ có đường ô tô thuận tiện giúp ngân hàng về mở chi nhánh). Do đó, kết quả LATE không thể đại diện hoàn toàn cho tác động trung bình toàn bộ tổng thể (ATE).
+
+```{r}
+# ==============================================================================
+# MỞ RỘNG: TẠO BIẾN TÁC ĐỘNG TỔNG HỢP (CLEAN COMPARISON GROUP)
+# ==============================================================================
+
+# 1. Tạo biến tác động tổng hợp (credit_any)
+# credit_any = 1 nếu hộ gia đình vay tín dụng nam HOẶC tín dụng nữ
+# credit_any = 0 nếu hộ gia đình KHÔNG vay bất kỳ chương trình nào
+df$credit_any <- ifelse(df$credit_m == 1 | df$credit_f == 1, 1, 0)
+
+# Kiểm tra bảng tần số nhóm thụ hưởng tổng hợp
+table(df$credit_any, useNA = "ifany")
+
+# 2. Chạy mô hình Hồi quy Biến công cụ 2SLS tổng hợp
+# Y: ln_taisanbinhquan
+# X (Controls): agehead + educhead
+# T (Endogenous): credit_any
+# Z (Instrument): vaccess (đường ô tô vào làng)
+modelling_any <- ivreg(ln_taisanbinhquan ~ agehead + educhead | credit_any | vaccess, data = df)
+
+# 3. Hiển thị kết quả hồi quy và bảng kiểm định chẩn đoán (Wu-Hausman)
+summary(modelling_any, diagnostics = TRUE)
+```
