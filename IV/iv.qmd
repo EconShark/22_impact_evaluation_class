@@ -32,6 +32,7 @@ knitr:
   opts_chunk:
     dev: "cairo_pdf"
 ---
+
 **GVHD:** TS Lương Vinh Quốc Duy
 
 \newpage
@@ -112,8 +113,9 @@ Hiện tượng vi phạm giả định $E[\varepsilon_i \vert{} T_i] = 0$ này 
 
 ### Cơ Chế Hồi Quy Hai Giai Đoạn (Two-Stage Least Squares - 2SLS):
 
-- **Giai đoạn 1 (First Stage):** Hồi quy biến nội sinh $T_i$ theo biến công cụ $Z_i$ và các biến kiểm soát $X_i$ để tính giá trị dự báo $\hat{T}_i$: $$T_i = \alpha_0 + \alpha_1 Z_i + \alpha_2 X_i + u_i \implies \text{Tính giá trị dự báo } \hat{T}_i$$
-- **Giai đoạn 2 (Second Stage):** Hồi quy biến kết quả $Y_i$ theo giá trị dự báo $\hat{T}_i$ và các biến kiểm soát $X_i$: $$Y_i = \beta_0 + \beta_1 \hat{T}_i + \beta_2 X_i + \varepsilon_i$$
+- **Giai đoạn 1 (First Stage):** Hồi quy biến nội sinh $T_i$ theo biến công cụ $Z_i$ và các biến kiểm soát ngoại sinh $X_i$: $$T_i = \alpha_0 + \alpha_1 Z_i + \gamma X_i + v_i \implies \text{Tính giá trị dự báo } \hat{T}_i$$ *(trong đó* $v_i$ là phần dư ngẫu nhiên của phương trình Giai đoạn 1)
+
+- **Giai đoạn 2 (Second Stage):** Hồi quy biến kết quả $Y_i$ theo giá trị dự báo $\hat{T}_i$ và các biến kiểm soát $X_i$: $$Y_i = \beta_0 + \beta_1 \hat{T}_i + \delta X_i + \varepsilon_i$$ *(trong đó* $\varepsilon_i$ là phần dư của phương trình cấu trúc chính)
 
 Hệ số $\hat{\beta}_1$ thu được từ giai đoạn 2 là ước lượng không thiên lệch của tác động chính sách (LATE - Local Average Treatment Effect).
 
@@ -242,7 +244,7 @@ Sargan              0   NA        NA      NA
 
 - $H_1$: Biến `credit_m` là nội sinh.
 
-- **Diễn giải:** Giá trị $p$-value $= 0.0646 < 0.10$ ($6.46\% < 10\%$).
+- **Diễn giải:** Giá trị $p$-value $= 0.0646 < 0.10$
 
 - **Kết luận:** Bác bỏ giả thuyết $H_0$ ở mức ý nghĩa $10\%$. Tồn tại hiện tượng nội sinh giữa quyết định vay vốn và các đặc điểm không quan sát được. Do đó, việc sử dụng mô hình Biến công cụ (2SLS) là bắt buộc và kết quả thu được đáng tin cậy hơn OLS.
 
@@ -263,7 +265,7 @@ educhead     0.05150    0.14703   0.350    0.726
 
 - Hệ số ước lượng $\hat{\beta}_{\text{credit\_m}} = 13.23598$.
 
-- Giá trị $p$-value $= 0.534 > 0.10$ ($53.4\% > 10\%$).
+- Giá trị $p$-value $= 0.534 > 0.10$
 
 - **Ý nghĩa kinh tế & chính sách:**
 
@@ -272,6 +274,26 @@ educhead     0.05150    0.14703   0.350    0.726
 - **Kết luận chính sách:** Chưa có bằng chứng thống kê cho thấy sự khác biệt có ý nghĩa về mức tài sản bình quân đầu người giữa hộ gia đình có vay tín dụng vi mô nam và hộ không vay.
 
 - **Ghi chú giảng viên:** Việc kết quả không có ý nghĩa thống kê không phải là "kết quả xấu", mà nó phản ánh trung thực thực tế thực nghiệm rằng chương trình tín dụng dành cho nam chưa tạo ra bứt phá vượt trội về tích lũy tài sản so với nhóm đối chứng, qua đó hỗ trợ nhà quản lý điều chỉnh thiết kế chương trình.
+
+## Các Lưu Ý Quan Trọng Của Giảng Viên Khi Phân Tích Mô Hình 2SLS/IV
+
+1.  **Bản chất của biến** $\hat{T}$ (T_hat) ở Giai đoạn 2:
+
+    - Ở Giai đoạn 1, $T$ là biến giả dummy (0/1). Khi tính giá trị dự báo $\hat{T}$, về mặt số học $\hat{T}$ trở thành **biến liên tục** (nhận các giá trị xác suất từ 0 đến 1).
+
+    - Tuy nhiên, khi đưa $\hat{T}$ vào Giai đoạn 2, **cách giải thích hệ số** $\beta_1$ vẫn viết theo kiểu biến giả (dummy): biểu thị chênh lệch trung bình về biến kết quả $Y$ giữa nhóm thụ hưởng và nhóm đối chứng.
+
+2.  **Căn cứ vào bản chất của biến Outcome (**$Y$) để diễn giải dấu hệ số:
+
+    - Không phải lúc nào hệ số mang dấu dương (+) cũng là tin vui, hay dấu âm (-) là tin xấu.
+
+    - Phải căn cứ vào **bản chất của** $Y$: Nếu $Y$ đại diện cho tài sản/thu nhập thì hệ số dương là tích cực; nếu $Y$ đại diện cho tỷ lệ nghèo/bệnh tật thì hệ số âm mới thể hiện tác động thành công của chính sách.
+
+3.  **Ưu tiên tập trung vào dấu (±), không quá chú trọng quy mô số học tuyệt đối:**
+
+    - Khi đọc bảng kết quả hồi quy đánh giá tác động, **trọng tâm chính là chiều tác động (dấu + hay -) và ý nghĩa thống kê (p-value)**, thay vì quá bận tâm vào độ lớn số học chính xác của hệ số.
+
+    - Nguyên nhân là do dữ liệu mẫu thực nghiệm luôn có độ biến động ngẫu nhiên, con số quy mô tuyệt đối có thể thay đổi tùy thuộc vào đơn vị đo lường, nhưng **dấu (±) mới là yếu tố phản ánh bản chất xu hướng tác động thực sự của chính sách**.
 
 ### Góc Nhìn Về Giá Trị p-value Trong Đánh Giá Tác Động
 
@@ -291,7 +313,7 @@ educhead     0.05150    0.14703   0.350    0.726
 - Hạn chế này xuất hiện khi kết quả tại $t$ **KHÔNG có ý nghĩa thống kê (**$p > 0.10$), đúng như trường hợp `credit_m` trong bài học:
 
 | Kịch bản tại $T = 1998$ | Dữ liệu $T=1998$ quan sát được | Diễn biến thực tế từ $T=1991$ đến $1998$ | Kết luận chính sách |
-|:-----------------|:-----------------|:-----------------|:-----------------|
+|:---|:---|:---|:---|
 | **Kịch bản A (Zero Impact)** | Nhóm vay $=$ Nhóm không vay ($p > 0.10$) | Cả 2 nhóm cùng xuất phát ở \$100M (1991) và dừng ở \$100M (1998). | Chương trình **không có tác động**. |
 | **Kịch bản B (Catch-up Effect)** | Nhóm vay $=$ Nhóm không vay ($p > 0.10$) | Nhóm vay xuất phát ở \$20M (1991) tăng lên \$100M (1998); Nhóm không vay giữ nguyên \$100M. | Chương trình có **tác động bắt kịp cực lớn** (+ \$80M). |
 
@@ -348,6 +370,36 @@ Khi phân nhóm bằng biến `credit_m`, nhóm `credit_m = 0` vẫn có thể c
 ## Hạn Chế Của LATE (Local Average Treatment Effect)
 
 Ước lượng IV chỉ đo lường tác động đối với nhóm **Compliers** (những hộ gia đình quyết định vay vốn vì địa phương họ có đường ô tô thuận tiện giúp ngân hàng về mở chi nhánh). Do đó, kết quả LATE không thể đại diện hoàn toàn cho tác động trung bình toàn bộ tổng thể (ATE).
+
+## Phản Biện Tính Hợp Lệ Của Biến Công Cụ (Exclusion Restriction Violation)
+
+### Kiểm định Biến công cụ yếu (Weak Instruments Test)
+
+Bên cạnh kiểm định Wu-Hausman, bảng chẩn đoán `diagnostics = TRUE` trong R cung cấp kiểm định Weak Instruments:
+
+``` text
+Diagnostic tests:                  df1  df2  statistic  p-value Weak instruments   1 1125      0.456   0.4994 Wu-Hausman         1 1124      3.423   0.0646 . 
+```
+
+**Giả thuyết** $H_0$: Biến công cụ $Z$ là biến công cụ yếu (First-stage $F < 10$).
+
+**Kết quả:** $p\text{-value} = 0.4994 > 0.10$ (giá trị $F = 0.456 \ll 10$). Ta không thể bác bỏ giả thuyết $H_0$.
+
+**Diễn giải:** Biến `vaccess` có sức mạnh dự báo rất kém đối với quyết định vay tín dụng nam (`credit_m`). Theo lý thuyết kinh tế lượng (Glewwe & Todd, 2022), biến công cụ yếu làm mất hiệu quả ước lượng và phình to sai số chuẩn (Standard Error) của hệ số tác động. Điều này giải thích tại sao Std. Error của `credit_m` bị vọt lên mức 21.255, kéo theo $p\text{-value} = 0.534$ không có ý nghĩa thống kê.
+
+### Một hạn chế phương pháp luận quan trọng cần thảo luận là **Ràng buộc loại trừ (Exclusion Restriction)** của biến `vaccess` ($\text{vaccess} \not\rightarrow Y$).
+
+- **Cơ sở lý thuyết:** Biến công cụ valid đòi hỏi $Z$ chỉ tác động lên tài sản $Y$ gián tiếp thông qua khoản vay $T$.
+
+- **Thực tế thực nghiệm:** Đường ô tô vào làng (`vaccess = 1`) là một hạ tầng công cộng mang lại nhiều tác động trực tiếp đến tài sản hộ gia đình:
+
+  1.  Giảm chi phí thương mại và vận chuyển nông sản.
+
+  2.  Gia tăng giá trị bất động sản/đất đai địa phương.
+
+  3.  Thúc đẩy giao thương và tạo cơ hội việc làm phi nông nghiệp.
+
+- **Kết luận:** Do `vaccess` có thể tác động trực tiếp đến tài sản hộ gia đình mà không cần thông qua kênh tín dụng, giả định $\text{Cov}(\text{vaccess}, \varepsilon) = 0$ rất dễ bị vi phạm trong thực tế. Điều này nhắc nhở các nhà đánh giá chính sách cần thận trọng và cân nhắc tìm kiếm các biến công cụ ngoại sinh hơn (như chính sách bốc thăm ngẫu nhiên hoặc các cú sốc tự nhiên).
 
 ```{r}
 # ==============================================================================
