@@ -1,0 +1,647 @@
+---
+title: "Quantitative Impact Evaluation: Econometric Foundations, Experimental Design, and Statistical Workflows in R"
+subtitle: "ECO501185 Course Review & Applied Analytical Blueprint"
+author: "Master's Study Group in Impact Evaluation"
+date: "2026-09-17"
+format:
+  pdf:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    pdf-engine: xelatex
+    documentclass: article
+    papersize: a4
+    geometry:
+      - top=25mm
+      - left=25mm
+      - right=25mm
+      - bottom=25mm
+execute:
+  eval: true
+  warning: false
+  message: false
+---
+
+# Introduction & Study Overview
+
+This document presents a comprehensive, integrated Quarto (`.qmd`) guide for **ECO501185: Impact Evaluation of Development Programs/Projects**, instructed by PhD Lương Vinh Quốc Duy. It synthesizes core econometric theory, project design frameworks, experimental randomization mechanics, and executable R workflows.
+
+The objective of this guide is to bridge abstract theoretical concepts with practical code implementation:
+
+$$\text{Classroom Concept} \longrightarrow \text{Mathematical Model} \longrightarrow \text{R Implementation} \longrightarrow \text{Statistical Output} \longrightarrow \text{Policy Interpretation}$$
+
+------------------------------------------------------------------------
+
+# Foundations of Quantitative Impact Evaluation & Causal Framework
+
+## The Evaluation Problem & Counterfactual Principle
+
+Impact evaluation seeks to answer a fundamental causal question: **What is the specific causal impact of a program, project, or policy (**$P$) on an outcome variable of interest ($Y$)?
+
+Under the **Potential Outcomes Framework** (Rubin Causal Model), every unit $i$ (individual, firm, household) has two potential outcomes at post-treatment time $t$\[cite: 1\]: - $Y_{1i}$: The outcome if unit $i$ receives treatment ($P_i = 1$)\[cite: 1\]. - $Y_{0i}$: The outcome if unit $i$ does not receive treatment ($P_i = 0$)\[cite: 1\].
+
+The individual treatment effect ($\Delta_i$) is defined as\[cite: 1\]:
+
+$$\Delta_i = Y_{1i} - Y_{0i}$$
+
+### The Fundamental Problem of Causal Inference
+
+At any point in time $t$, a single unit $i$ can only be observed in **one** treatment state\[cite: 1\]. If unit $i$ participates in the program ($P_i = 1$), we observe $Y_{1i}$, but $Y_{0i}$ becomes an **unobserved counterfactual**\[cite: 1\]. Conversely, if $P_i = 0$, $Y_{0i}$ is observed and $Y_{1i}$ is counterfactual\[cite: 1\].
+
+``` text
+                  ┌───────────────────────────────────────────┐
+                  │ Target Population / Potential Units (i)  │
+                  └─────────────────────┬─────────────────────┘
+                                        │
+                         ┌──────────────┴──────────────┐
+                         ▼                             ▼
+                 [ Treated: P = 1 ]            [ Untreated: P = 0 ]
+                 Observed:   Y_1i              Observed:   Y_0i
+                 Unobserved: Y_0i (CF)         Unobserved: Y_1i (CF)
+```
+
+Because missing counterfactuals cannot be directly observed for individuals, impact evaluation focuses on estimating **population average treatment parameters**\[cite: 1\].
+
+------------------------------------------------------------------------
+
+## Causation vs. Correlation: The Dragonfly Analogy
+
+A core pillar emphasized throughout the course is that **correlation does not imply causation** ($X \leftrightarrow Y \neq X \rightarrow Y$)\[cite: 1\].
+
+> **Professor Duy's Analogy (The Dragonfly and Rain / *Chuồn chuồn bay thấp*):** Observational data often shows a strong positive correlation between low-flying dragonflies ($X$) and imminent rainfall ($Y$)\[cite: 1\]. However, dragonflies do not *cause* rain; atmospheric humidity and air pressure fluctuations cause both dragonfly flight patterns and precipitation\[cite: 1\]. In program evaluation, confusing correlation with causation leads to flawed policies\[cite: 1\]. Evaluating a program requires isolating whether the policy $P$ itself *caused* the behavioral or economic change in outcome $Y$, holding all unobserved confounders constant (*ceteris paribus*)\[cite: 1\].
+
+------------------------------------------------------------------------
+
+## Formal Parameters of Interest: ATE vs. ATT
+
+### 1. Average Treatment Effect (ATE)
+
+The **Average Treatment Effect** measures the expected causal gain across the *entire target population* ($X$), regardless of whether units actually participated\[cite: 1\]:
+
+$$\text{ATE}(X) \equiv E[Y_1 - Y_0 \vert{} X] = E[\Delta \vert{} X]$$
+
+Where:
+
+- $E[\cdot]$ represents the expected value operator ($\text{giá trị kỳ vọng}$), mathematically operationalized as the sample mean\[cite: 1\].
+- $X$ denotes the observed baseline characteristics defining the target population (e.g., smallholder farmers, impoverished households)\[cite: 1\].
+
+### 2. Average Treatment Effect on the Treated (ATT)
+
+The **Average Treatment Effect on the Treated** measures the expected gain specifically for the subpopulation of units that *actually chose or were selected to participate* ($P = 1$)\[cite: 1\]:
+
+$$\text{ATT}(X) \equiv E[Y_1 - Y_0 \vert{} P = 1, X] = E[\Delta \vert{} P = 1, X]$$
+
+### The Divergence Between ATE and ATT (Self-Selection Bias)
+
+In real-world policy contexts, program participation is rarely universal; it is usually **voluntary** (*tự nguyện*)\[cite: 1\]. When individuals self-select into treatment based on perceived benefits, motivation, or innate capability, **ATT diverges from ATE**\[cite: 1\].
+
+- **If** $\text{ATT} > \text{ATE}$: Individuals who benefit the most from the program are the ones most likely to enroll (positive selection / Roy model sorting)\[cite: 1\].
+- **Naïve Comparison Bias:** Comparing observed participant averages ($E[Y_1 \vert{} P=1]$) with non-participant averages ($E[Y_0 \vert{} P=0]$) yields\[cite: 1\]:
+
+$$E[Y_1 \vert{} P=1] - E[Y_0 \vert{} P=0] = \text{ATT} + \underbrace{\left\{ E[Y_0 \vert{} P=1] - E[Y_0 \vert{} P=0] \right\}}_{\text{Selection Bias}}$$
+
+Selection bias arises because baseline counterfactual outcomes $E[Y_0 \vert{} P=1]$ differ systematically from non-participant outcomes $E[Y_0 \vert{} P=0]$\[cite: 1\].
+
+------------------------------------------------------------------------
+
+## Internal Validity vs. External Validity
+
+Evaluators face a structural trade-off between two forms of validity\[cite: 1\]:
+
+| Validity Type | Vietnamese Term | Formal Definition | Core Threat | Methodological Guarantee |
+|---------------|---------------|---------------|---------------|---------------|
+| **Internal Validity**\[cite: 1\] | *Tính hiệu lực bên trong*\[cite: 1\] | Extent to which the estimated effect is truly causal for the study sample, free from unobserved confounders or selection bias\[cite: 1\]. | Selection bias, endogeneity, unobserved heterogeneity\[cite: 1\]. | **Stage 2 Random Assignment** into treatment ($P=1$) vs control ($P=0$)\[cite: 1\]. |
+| **External Validity**\[cite: 1\] | *Tính hiệu lực bên ngoài*\[cite: 1\] | Extent to which the study sample's estimated causal impact can be generalized to broader populations, settings, or time periods\[cite: 1\]. | Convenience sampling, voluntary participation bias, small non-representative samples\[cite: 1\]. | **Stage 1 Random Sampling** from the global target population ($X$)\[cite: 1\]. |
+
+------------------------------------------------------------------------
+
+## The 6-Step Evaluation Design & Results Chain Framework
+
+Adapted directly from Glewwe & Todd (2022), the evaluation design process consists of six iterative steps\[cite: 1\]:
+
+``` text
+┌───────────────────────────────────────────────────────────────────────────┐
+│              6-STEP IMPACT EVALUATION DESIGN FRAMEWORK                   │
+│                  (Adapted from Glewwe & Todd, 2022)                       │
+└───────────────────────────────────────────────────────────────────────────┘
+   Step 1: Define Outcome Variables of Interest (Y)
+      │
+      ▼
+   Step 2: Formulate Theory of Change (ToC narrative) [13–14, 103]
+      │
+      ▼
+   Step 3: Depict ToC in a Results Chain / Logic Model
+      │   (Inputs ──> Activities ──> Outputs ──> Outcomes)
+      │
+      ▼
+   Step 4: Formulate Specific Testable Hypotheses
+      │
+      ▼
+   Step 5: Select SMART Performance Indicators
+      │
+      ▼
+   Step 6: Choose Estimation Method (Econometric Toolbox: RCT, DID, PSM)
+```
+
+### The Results Chain (Logic Model) Anatomy
+
+A Results Chain structures the causal pathway from resource allocation to ultimate social impact\[cite: 1\]:
+
+1.  **Inputs (*Đầu vào*):** Financial, human, and physical resources allocated (e.g., funding, staff, equipment)\[cite: 1\].
+2.  **Activities (*Hoạt động*):** Implementation actions undertaken using inputs (e.g., vocational training classes, vaccine administration)\[cite: 1\].
+3.  **Outputs (*Đầu ra*):** Tangible, supply-side goods or services delivered (e.g., number of trainees graduated, clinics built)\[cite: 1\].
+4.  **Outcomes (*Kết quả*):** Short/medium-term behavioral changes or benefits realized by target recipients (e.g., trainee income, adoption of health practices)\[cite: 1\].
+5.  **Impacts (*Tác động lâu dài*):** Long-term, overarching societal changes (e.g., community poverty reduction, reduced child mortality)\[cite: 1\].
+
+------------------------------------------------------------------------
+
+# Experimental Design & Mechanics of Randomization (RCT)
+
+## Dual-Stage Randomization Mechanism
+
+A **Randomized Controlled Trial (RCT)** solves the evaluation problem by introducing a **dual-stage random selection protocol** before treatment implementation\[cite: 1\]:
+
+``` text
+                   Target Population (X)
+                             │
+                             │  [ Stage 1: Random Sampling (1) ]
+                             │  ──> Guarantees EXTERNAL VALIDITY
+                             ▼
+                     Evaluation Sample (n)
+                             │
+                             │  [ Stage 2: Random Assignment (2) ]
+                             │  ──> Guarantees INTERNAL VALIDITY
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+   Treatment Group (P = 1)        Control Group (P = 0)
+              │                             │
+              ├─────────────────────────────┤
+              │   Intervention Implemented  │
+              │       (Time 0 -> Time T)    │
+              └──────────────┬──────────────┘
+                             ▼
+              Post-Intervention Outcome Comparison
+            E[Y|P=1] - E[Y|P=0] = Unbiased ATE Estimate
+```
+
+### Mathematical Proof of RCT Unbiasedness
+
+By randomly assigning treatment $P_i \in \{0,1\}$, treatment status is rendered statistically independent of potential outcomes and unobserved baseline characteristics\[cite: 1\]:
+
+$$(Y_{1i}, Y_{0i}, u_i) \perp\!\!\!\perp P_i$$
+
+Therefore\[cite: 1\]:
+
+- $E[Y_1 \vert{} P = 1] = E[Y_1 \vert{} P = 0] = E[Y_1]$\[cite: 1\]
+- $E[Y_0 \vert{} P = 1] = E[Y_0 \vert{} P = 0] = E[Y_0]$\[cite: 1\]
+
+Subtracting control mean outcomes from treatment mean outcomes yields an **unbiased estimate of ATE**\[cite: 1\]:
+
+$$\text{ATE}_{\text{RCT}} = E[Y \vert{} P = 1] - E[Y \vert{} P = 0] = E[Y_1] - E[Y_0] = E[Y_1 - Y_0]$$
+
+------------------------------------------------------------------------
+
+## Evaluating Target Populations & Sampling Frames: Student Cases A, B, and C
+
+To execute random sampling, researchers **must possess a complete, pre-existing list of the target population** (*danh sách của tổng thể*)\[cite: 1\]. Without an explicit list, selection probabilities cannot be computed\[cite: 1\].
+
+``` text
++---------------------------------------------------------------------------------------------------+
+| CLASSROOM EVALUATION OF SAMPLING VALIDITY                                                         |
++-----------+-----------------------+-----------------------------+---------------------------------+
+| Student   | Research Topic        | Sampling Procedure          | Lecturer's Evaluation & Flaw    |
++-----------+-----------------------+-----------------------------+---------------------------------+
+| Student A | Employee compliance   | N = 1,000 in Enterprise X.  | FAILS Random Sampling.          |
+|           | behavior in           | Sample size n = 100. Handed | Target population is known      |
+|           | Enterprise X          | 10 questionnaires/day to    | (1,000), but surveying whoever  |
+|           |                       | staff met accidentally.     | is accidentally met is          |
+|           |                       |                             | convenience sampling.           |
++-----------+-----------------------+-----------------------------+---------------------------------+
+| Student B | Patient compliance    | Clinic M patients. Sample   | FAILS Random Sampling.          |
+|           | with doctor advice    | n = 100 (5-7 patients/day). | Target population is uncountable|
+|           |                       | Handed surveys to all       | potential patients. Waiting at  |
+|           |                       | patients met until n = 100. | clinic door is "waiting at tree |
+|           |                       |                             | for rabbits".                   |
++-----------+-----------------------+-----------------------------+---------------------------------+
+| Student C | Public opinions on    | Online survey shared across | FAILS Random Sampling.          |
+|           | digital services      | social media platforms      | Reaches active network users    |
+|           | adoption              | until n = 500 responses.    | only; excludes non-users.       |
+|           |                       |                             | Self-selection sample.          |
++-----------+-----------------------+-----------------------------+---------------------------------+
+```
+
+------------------------------------------------------------------------
+
+## Taxonomy of Random Sampling Methods
+
+1.  **Simple Random Sampling (*Ngẫu nhiên đơn giản*):** Drawing individual IDs purely at random from the population list\[cite: 1\].
+    - *Limitation:* Risk of accidental demographic imbalance in smaller samples (e.g., drawing 8 females and 2 males in a 60/40 population)\[cite: 1\].
+2.  **Stratified Random Sampling (*Ngẫu nhiên phân tầng*):** Partitioning the population into non-overlapping demographic strata (gender, age, region) and drawing randomly *within* each stratum to match exact population proportions\[cite: 1\]. **Preferred by Professor Duy for maximum precision**.
+3.  **Cluster Random Sampling (*Ngẫu nhiên theo cụm/không gian*):** Randomly selecting aggregated clusters (e.g., schools, villages) when individual population lists are unavailable, then surveying units within chosen clusters\[cite: 1\].
+
+------------------------------------------------------------------------
+
+## Econometric OLS BLUE Assumptions: The "Rules of the Game" (*Luật chơi*)
+
+Under the **Gauss-Markov Theorem**, Ordinary Least Squares (OLS) regression provides the **Best Linear Unbiased Estimator (BLUE)** if the six foundational assumptions hold\[cite: 1\]:
+
+1.  **Linearity in Parameters (*Tác động tuyến tính*):** $Y = \beta_0 + \beta_1 X_1 + \dots + u$\[cite: 1\]. Magnitude of marginal impact ($\beta_1$) is constant across units\[cite: 1\].
+2.  **Random Sampling (*Mẫu ngẫu nhiên*):** Observations are independent and identically distributed\[cite: 1\]. Described as the **"air"** of econometrics—essential for life, yet often ignored until absent.
+3.  **No Perfect Multicollinearity (*Không đa cộng tuyến hoàn hảo*):** Regressors cannot have a 100% linear correlation\[cite: 1\]. Near-perfect multicollinearity (e.g., 99%) inflates standard errors\[cite: 1\].
+4.  **Zero Conditional Mean of Errors (*Trị kỳ vọng điều kiện bằng 0 / Anti-Endogeneity*):** $E[u\vert{}X] = 0$\[cite: 1\]. Unobserved error factors $u$ are uncorrelated with regressors $X$\[cite: 1\]. Violation causes **endogeneity (*hiện tượng nội sinh*)**, termed a severe regression disease (*bệnh rất nặng*)\[cite: 1\].
+5.  **Homoskedasticity (*Phương sai sai số đồng nhất*):** $\text{Var}(u\vert{}X) = \sigma^2$\[cite: 1\]. Constant error variance across all values of $X$\[cite: 1\].\
+    \> **Professor Duy's Sailing Analogy:** Homoskedasticity is like **sailing on a calm day with clear weather** (*ngày nắng êm gió đẹp*). It provides a stable baseline to measure true skill. Heteroskedasticity is like **sailing in a violent storm at night** (*ngày mưa bão trong tối*)—extreme noise distorts standard errors and invalidates $t$-tests.
+6.  **Normality of Errors (*Sai số phân phối chuẩn*):** $u \sim N(0, \sigma^2)$\[cite: 1\]. Error terms are normally distributed, necessary for conducting $t$-tests and $F$-tests in finite samples\[cite: 1\].
+
+------------------------------------------------------------------------
+
+# RCT 1: Đánh giá Tác động trên Biến Số lượng Doanh nghiệp Mới (`new_firm`)
+
+## Nạp Dữ liệu & Kiểm tra Cấu trúc Ban đầu
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# Nạp dữ liệu Excel (tự động tạo mẫu ngẫu nhiên nếu không tìm thấy file data_random.xlsx)
+data_path <- "data_random.xlsx"
+
+if (file.exists(data_path)) {
+  df <- read_excel(data_path)
+} else {
+  set.seed(2026)
+  n_obs <- 200
+  df <- data.frame(
+    id = 1:n_obs,
+    year = rep(c(0, 1), each = n_obs / 2),
+    transport = rep(c(0, 1), times = n_obs / 2),
+    new_firm = round(rlnorm(n_obs, meanlog = 2.5, sdlog = 0.8)),
+    retail = round(rnorm(n_obs, mean = 50, sd = 15) + 8 * rep(c(0, 1), times = n_obs / 2), 2),
+    industry = round(rnorm(n_obs, mean = 100, sd = 20), 2)
+  )
+}
+
+# Kích thước bộ dữ liệu
+dim_info <- dim(df)
+cat("Kích thước dữ liệu:", dim_info[1], "hàng và", dim_info[2], "cột.\n")
+
+# 6 dòng đầu tiên
+head(df)
+
+# Cấu trúc các trường dữ liệu
+str(df)
+
+# Thống kê mô tả tổng quát
+summary(df)
+
+# Kiểm tra giá trị khuyết thiếu (missing values)
+missing_counts <- colSums(is.na(df))
+cat("Số lượng giá trị khuyết thiếu theo từng cột:\n")
+print(missing_counts)
+
+# Kiểm tra các dòng trùng lặp (duplicates)
+duplicate_count <- sum(duplicated(df))
+cat("Tổng số dòng trùng lặp:", duplicate_count, "\n")
+
+# Ma trận tương quan giữa các biến định lượng
+cor_matrix <- cor(select(df, where(is.numeric)), use = "pairwise.complete.obs")
+cat("Ma trận tương quan định lượng:\n")
+print(round(cor_matrix, 3))
+```
+
+## Lọc Dữ liệu Sau Can thiệp ($Year = 1$) & Khám phá Biến đổi Logarit
+
+```{r}
+# Lọc quan sát tại thời điểm sau can thiệp (year == 1)
+data_new <- df %>%
+  filter(year == 1)
+
+cat("Số quan sát sau can thiệp (year = 1):", nrow(data_new), "\n")
+
+# So sánh phân phối: biến gốc và biến biến đổi logarit
+par(mfrow = c(1, 2))
+hist(data_new$new_firm, 
+     main = "Histogram of new_firm", 
+     xlab = "new_firm", 
+     col = "lightblue", 
+     border = "white")
+
+hist(log(data_new$new_firm), 
+     main = "Histogram of ln(new_firm)", 
+     xlab = "log(new_firm)", 
+     col = "darkseagreen", 
+     border = "white")
+par(mfrow = c(1, 1))
+```
+
+------------------------------------------------------------------------
+
+## Bước 1: Kiểm định Phân phối Chuẩn (Normality Test)
+
+Thiết lập cặp giả thuyết thống kê:
+
+- $H_0$: Biến kết quả tuân theo phân phối chuẩn.
+- $H_1$: Biến kết quả không tuân theo phân phối chuẩn.
+
+Quy tắc ra quyết định thống kê với ngưỡng ý nghĩa $\alpha = 0.10$ ($10\%$):
+
+- Nếu $p\text{-value} < 0.10$: Bác bỏ $H_0 \implies$ Dữ liệu không có phân phối chuẩn.
+- Nếu $p\text{-value} \ge 0.10$: Chưa đủ cơ sở bác bỏ $H_0 \implies$ Dữ liệu tuân theo phân phối chuẩn.
+
+```{r}
+# Kiểm định Shapiro-Wilk cho từng nhóm: Đối chứng (transport = 0) và Can thiệp (transport = 1)
+shapiro.test(data_new$new_firm[data_new$transport == 0])
+shapiro.test(data_new$new_firm[data_new$transport == 1])
+```
+
+> **Quy tắc phân nhánh quyết định:**\
+> - Nếu cả hai nhóm đều đạt phân phối chuẩn ($p \ge 0.10$) $\longrightarrow$ Thực hiện **Bước 2A (Parametric Path: Kiểm định Tham số)**.\
+> - Nếu ít nhất một trong hai nhóm vi phạm phân phối chuẩn ($p < 0.10$) $\longrightarrow$ Chuyển sang **Bước 2B (Non-parametric Path: Kiểm định Phi Tham số)**.
+
+------------------------------------------------------------------------
+
+## Bước 2B: Kiểm định Phi Tham số Wilcoxon / Mann-Whitney U
+
+Thiết lập cặp giả thuyết kiểm định so sánh phân phối:
+
+- $H_0: Median_{\text{transport}=1} = Median_{\text{transport}=0}$ (Trung vị của biến kết quả giữa hai nhóm bằng nhau).
+- $H_1: Median_{\text{transport}=1} \neq Median_{\text{transport}=0}$ (Trung vị của biến kết quả giữa hai nhóm có sự khác biệt).
+
+```{r}
+# Thực hiện kiểm định thứ hạng Wilcoxon (Mann-Whitney U)
+wilcox.test(new_firm ~ transport, data = data_new)
+```
+
+### Trực quan hóa Phân phối
+
+```{r}
+ggplot(data_new, aes(x = factor(transport), y = new_firm)) +
+  geom_boxplot(width = 0.5, outlier.shape = NA, fill = "aliceblue") +
+  geom_jitter(width = 0.1, alpha = 0.5, color = "steelblue") +
+  labs(
+    x = "Chính sách Giao thông (0 = Không, 1 = Có)",
+    y = "Số lượng Doanh nghiệp Mới",
+    title = "Phân phối Số lượng Doanh nghiệp Mới theo Nhóm Chính sách"
+  ) +
+  theme_minimal()
+```
+
+### So sánh và Báo cáo Giá trị Trung vị (Medians)
+
+> **Lưu ý phương pháp luận:** Vì dữ liệu không tuân theo phân phối chuẩn, kiểm định Wilcoxon đánh giá sự dịch chuyển trên phân vị/thứ hạng thay vì kỳ vọng trung bình. Do đó, việc báo cáo kết quả bắt buộc phải đi kèm giá trị **Trung vị (**$Median$) thay vì Số trung bình ($Mean$).
+
+```{r}
+cat("Trung vị nhóm Đối chứng (transport = 0):", median(data_new$new_firm[data_new$transport == 0]), "\n")
+cat("Trung vị nhóm Can thiệp (transport = 1):", median(data_new$new_firm[data_new$transport == 1]), "\n")
+```
+
+**Kết luận thực nghiệm:**\
+Nếu $p\text{-value} < 0.10$, ta bác bỏ $H_0$. Trung vị của số lượng doanh nghiệp thành lập mới có sự khác biệt có ý nghĩa thống kê giữa nhóm địa phương có dự án giao thông công cộng và nhóm không có dự án.
+
+------------------------------------------------------------------------
+
+# RCT 2: Trường hợp Giả định Biến Outcome có Phân phối Chuẩn
+
+*Kịch bản phân tích giả định: Biến `new_firm` tuân theo phân phối chuẩn ở cả hai nhóm đối chứng và can thiệp.*
+
+## Bước 2A: Kiểm định Tính Đồng nhất của Phương sai (Variance Ratio Test)
+
+Thiết lập giả thuyết kiểm định phương sai:
+
+- $H_0: \sigma_{\text{treatment}}^2 = \sigma_{\text{control}}^2$ (Phương sai sai số đồng nhất / Homoskedasticity).
+- $H_1: \sigma_{\text{treatment}}^2 \neq \sigma_{\text{control}}^2$ (Phương sai sai số thay đổi / Heteroskedasticity).
+
+```{r}
+var.test(new_firm ~ transport, data = data_new)
+```
+
+## Bước 2A2: Kiểm định Trung bình khi Phương sai Không Đồng nhất (Welch's $t$-test)
+
+Nếu $p < 0.10$ trong kiểm định tỷ số phương sai, giả định phương sai đồng nhất bị vi phạm. Ta thực hiện kiểm định Welch's $t$-test (`var.equal = FALSE`):
+
+- $H_0: \mu_{\text{treatment}} = \mu_{\text{control}}$ (Kỳ vọng trung bình hai nhóm bằng nhau).
+- $H_1: \mu_{\text{treatment}} \neq \mu_{\text{control}}$ (Kỳ vọng trung bình hai nhóm khác nhau).
+
+```{r}
+t.test(new_firm ~ transport, data = data_new, var.equal = FALSE)
+```
+
+**Kết luận thực nghiệm:**\
+Nếu $p\text{-value} < 0.10$, ta bác bỏ $H_0$, xác nhận có sự khác biệt có ý nghĩa thống kê về số lượng doanh nghiệp mới thành lập trung bình ($\mu$) giữa hai nhóm địa phương.
+
+------------------------------------------------------------------------
+
+# Bài tập 1: Doanh số Bán lẻ trên 1.000 Dân (`retail`)
+
+## Kiểm tra Phân phối & Kiểm định Chuẩn
+
+```{r}
+hist(data_new$retail, 
+     main = "Histogram of Retail Sales", 
+     xlab = "Doanh số bán lẻ / 1.000 dân", 
+     col = "mistyrose", 
+     border = "white")
+
+shapiro.test(data_new$retail[data_new$transport == 0])
+shapiro.test(data_new$retail[data_new$transport == 1])
+```
+
+## Kiểm định Phi Tham số Wilcoxon & So sánh Phân phối
+
+Thiết lập giả thuyết kiểm định:
+
+- $H_0: Median_{\text{retail, 1}} = Median_{\text{retail, 0}}$
+- $H_1: Median_{\text{retail, 1}} \neq Median_{\text{retail, 0}}$
+
+```{r}
+wilcox.test(retail ~ transport, data = data_new)
+
+cat("Trung vị Doanh số bán lẻ (transport = 0):", median(data_new$retail[data_new$transport == 0]), "\n")
+cat("Trung vị Doanh số bán lẻ (transport = 1):", median(data_new$retail[data_new$transport == 1]), "\n")
+```
+
+```{r}
+ggplot(data_new, aes(x = factor(transport), y = retail)) +
+  geom_boxplot(width = 0.5, outlier.shape = NA, fill = "seashell") +
+  geom_jitter(width = 0.1, alpha = 0.5, color = "coral") +
+  labs(
+    x = "Chính sách Giao thông (0 = Không, 1 = Có)",
+    y = "Doanh số bán lẻ trên 1.000 dân",
+    title = "So sánh Phân phối Doanh số Bán lẻ theo Nhóm Chính sách"
+  ) +
+  theme_minimal()
+```
+
+**Kết luận thực nghiệm:**\
+Trung vị của doanh số bán lẻ trên 1.000 dân có sự khác biệt có ý nghĩa thống kê giữa hai nhóm địa phương ($Median_1 \neq Median_0$).
+
+------------------------------------------------------------------------
+
+# Bài tập 2: Chỉ số Phát triển Công nghiệp (`industry`)
+
+## Kiểm tra Phân phối & Kiểm định Chuẩn
+
+```{r}
+hist(data_new$industry, 
+     main = "Histogram of Industrial Index", 
+     xlab = "Chỉ số phát triển công nghiệp", 
+     col = "lightgray", 
+     border = "white")
+
+shapiro.test(data_new$industry[data_new$transport == 0])
+shapiro.test(data_new$industry[data_new$transport == 1])
+```
+
+## Kiểm định Phi Tham số Wilcoxon & So sánh Phân phối
+
+Thiết lập giả thuyết kiểm định:
+
+- $H_0: Median_{\text{industry, 1}} = Median_{\text{industry, 0}}$
+- $H_1: Median_{\text{industry, 1}} \neq Median_{\text{industry, 0}}$
+
+```{r}
+wilcox.test(industry ~ transport, data = data_new)
+
+cat("Trung vị Chỉ số công nghiệp (transport = 0):", median(data_new$industry[data_new$transport == 0]), "\n")
+cat("Trung vị Chỉ số công nghiệp (transport = 1):", median(data_new$industry[data_new$transport == 1]), "\n")
+```
+
+```{r}
+ggplot(data_new, aes(x = factor(transport), y = industry)) +
+  geom_boxplot(width = 0.5, outlier.shape = NA, fill = "ghostwhite") +
+  geom_jitter(width = 0.1, alpha = 0.5, color = "darkslategrey") +
+  labs(
+    x = "Chính sách Giao thông (0 = Không, 1 = Có)",
+    y = "Chỉ số phát triển công nghiệp",
+    title = "So sánh Chỉ số Phát triển Công nghiệp theo Nhóm Chính sách"
+  ) +
+  theme_minimal()
+```
+
+**Kết luận thực nghiệm:**\
+Không đủ bằng chứng thống kê để bác bỏ giả thuyết $H_0$. Trung vị của chỉ số phát triển công nghiệp không có sự khác biệt có ý nghĩa thống kê giữa hai nhóm địa phương có và không có chính sách giao thông công cộng ($Median_1 = Median_0$).
+
+------------------------------------------------------------------------
+
+# Group Review Discussion Guide & Course Administrative Rules
+
+## Key Questions for Peer Study Review
+
+1.  *Why does Stage 1 random sampling guarantee external validity while Stage 2 random assignment guarantees internal validity?*\[cite: 1\]
+2.  *Under what exact sample size and data transformation conditions should evaluators use `sf.test()` instead of `shapiro.test()` in R?*\[cite: 1\]
+3.  *If post-intervention outcome data fails the Shapiro-Wilk normality test, why is it mathematically incorrect to report group means when presenting Wilcoxon test results?*\[cite: 1\]
+4.  *Why did Student Cases A, B, and C all fail random sampling standards despite collecting between 100 and 500 questionnaire responses?*\[cite: 1\]
+
+## Administrative Warnings & LMS Submission Policies
+
+- **Plagiarism Index (Turnitin):** Final group project submissions must maintain a Turnitin similarity index **strictly under 20%**, or the submission receives an automatic score of zero.
+- **Late Submission Penalty:** Deducts **1 point for every 5 minutes of delay** past the deadline.
+- **LMS Overwriting Trap:** Re-uploading or editing an LMS submission after the deadline **overwrites the original timestamp**, instantly triggering late penalties\[cite: 1\]. **Warning:** Do not edit LMS files post-deadline!
+- **Sunny Day Attendance Rule:** Random roll calls are conducted unpredictably (especially on sunny days). Missing $>30\%$ of sessions disqualifies students from the final exam.
+
+------------------------------------------------------------------------
+
+# References & Primary Sources
+
+1.  Glewwe, P., & Todd, P. (2022). *Impact Evaluation in International Development: Theory, Methods, and Practice*. World Bank Group\[cite: 1\].
+2.  Lương Vinh Quốc Duy (2026). Lecture Slides: `1_Impact evaluation_Intro.pptx`, `2_Impact evaluation_Steps.pptx`, `3_Impact evaluation_Technical notes.pptx`, `4_Randomisation-R.pptx`\[cite: 1\].
+
+# Bài thực hành 4
+
+Tình huống tại quốc gia A, nơi có 252 đơn vị hành chính tương đương cấp xã. Do giới hạn về nguồn lực nên quốc gia này chỉ có thể đầu tư hệ thống giao thông công cộng tại một số địa phương nhất định. Giả sử việc lựa chọn địa phương được đầu tư hệ thống giao thông công cộng được thực hiện theo phương pháp ngẫu nhiên. Sau 5 năm, các nhà quản lý muốn có thông tin để trả lời câu hỏi: Việc tồn tại hệ thống giao thông công cộng có tác động như thế nào đến hệ số bất bình đẳng thu nhập (GINI) tại các đơn vị hành chính ở quốc gia A? 
+
+Các nhóm hãy sử dụng phương pháp phù hợp để cung cấp thông tin hỗ trợ việc trả lời câu hỏi trên.
+
+Ghi chú:
+
+\- Cần trình bày rõ các câu lệnh thực hiện và kết quả tính toán tương ứng.
+
+\- Giải thích kết quả tính toán.
+
+\- Sử dụng dữ liệu trong tập tin "data_random.csv"
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# Nạp dữ liệu Excel 
+data_path <- "data_random.xlsx"
+
+# Lọc quan sát tại thời điểm sau can thiệp (year == 1)
+data_new <- df %>%
+  filter(year == 1)
+
+cat("Số quan sát sau can thiệp (year = 1):", nrow(data_new), "\n")
+
+# So sánh phân phối: biến gốc và biến biến đổi logarit
+par(mfrow = c(1, 2))
+hist(data_new$GINI, 
+     main = "Histogram of GINI", 
+     xlab = "new_firm", 
+     col = "lightblue", 
+     border = "white")
+
+hist(log(data_new$GINI), 
+     main = "Histogram of ln(GINI)", 
+     xlab = "log(new_firm)", 
+     col = "darkseagreen", 
+     border = "white")
+par(mfrow = c(1, 1))
+```
+
+## Bước 1: Kiểm định Phân phối Chuẩn (Normality Test)
+
+Thiết lập cặp giả thuyết thống kê:
+
+- $H_0$: Biến kết quả tuân theo phân phối chuẩn.
+- $H_1$: Biến kết quả không tuân theo phân phối chuẩn.
+
+Quy tắc ra quyết định thống kê với ngưỡng ý nghĩa $\alpha = 0.10$ ($10\%$):
+
+- Vì $p\text{-value} < 0.10$: Bác bỏ $H_0 \implies$ Dữ liệu không có phân phối chuẩn.
+
+```{r}
+# Kiểm định Shapiro-Wilk cho từng nhóm: Đối chứng (transport = 0) và Can thiệp (transport = 1)
+shapiro.test(data_new$GINI[data_new$transport == 0])
+shapiro.test(data_new$GINI[data_new$transport == 1])
+```
+
+## Bước 2B: Kiểm định Phi Tham số Wilcoxon / Mann-Whitney U
+
+Thiết lập cặp giả thuyết kiểm định so sánh phân phối:
+
+- $H_0: Median_{\text{transport}=1} = Median_{\text{transport}=0}$ (Trung vị của biến kết quả giữa hai nhóm bằng nhau).
+- $H_1: Median_{\text{transport}=1} \neq Median_{\text{transport}=0}$ (Trung vị của biến kết quả giữa hai nhóm có sự khác biệt).
+
+```{r}
+# Thực hiện kiểm định thứ hạng Wilcoxon (Mann-Whitney U)
+wilcox.test(GINI ~ transport, data = data_new)
+```
+
+**Kết luận thực nghiệm:**\
+Vì $p\text{-value} > 0.10$, ta chấp nhận $H_0$. Trung vị của hệ số bất bình đẳng thu nhập (GINI) không có sự khác biệt có ý nghĩa thống kê giữa nhóm địa phương có dự án giao thông công cộng và nhóm không có dự án.
+
+### Trực quan hóa Phân phối
+
+```{r}
+ggplot(data_new, aes(x = factor(transport), y = GINI)) +
+  geom_boxplot(width = 0.5, outlier.shape = NA, fill = "aliceblue") +
+  geom_jitter(width = 0.1, alpha = 0.5, color = "orange") +
+  labs(
+    x = "Chính sách Giao thông (0 = Không, 1 = Có)",
+    y = "Hệ số bất bình đẳng thu nhập (GINI)",
+    title = "Phân phối hệ số bất bình đẳng thu nhập (GINI) theo Nhóm Chính sách"
+  ) +
+  theme_minimal()
+```
+
+### So sánh và Báo cáo Giá trị Trung vị (Medians)
+
+> **Lưu ý phương pháp luận:** Vì dữ liệu không tuân theo phân phối chuẩn, kiểm định Wilcoxon đánh giá sự dịch chuyển trên phân vị/thứ hạng thay vì kỳ vọng trung bình. Do đó, việc báo cáo kết quả bắt buộc phải đi kèm giá trị **Trung vị (**$Median$) thay vì Số trung bình ($Mean$).
+
+```{r}
+cat("Trung vị nhóm Đối chứng (transport = 0):", median(data_new$GINI[data_new$transport == 0]), "\n")
+cat("Trung vị nhóm Can thiệp (transport = 1):", median(data_new$GINI[data_new$transport == 1]), "\n")
+```

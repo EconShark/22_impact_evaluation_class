@@ -1,0 +1,81 @@
+---
+title: "Quantitative Impact Evaluation: IV"
+subtitle: "ECO501185"
+author: "Master's Study Group in Impact Evaluation"
+date: "2026-09-17"
+format:
+  pdf:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    pdf-engine: xelatex
+    documentclass: article
+    papersize: a4
+    geometry:
+      - top=25mm
+      - left=25mm
+      - right=25mm
+      - bottom=25mm
+execute:
+  eval: true
+  warning: false
+  message: false
+---
+
+# 
+
+# IV
+
+```{r}
+install.packages("ivreg",dependencies = 1)
+```
+
+```{r}
+library(ivreg)
+library(readxl)
+
+df <- read_excel("data_demo.xls", sheet = "Data 1998")
+```
+
+Tập tin "Data_demo.xls" chứa dữ liệu được thu thập từ chương trình tín dụng vi mô được thực hiện ở một quốc gia ở Nam Á. Chương trình tín dụng vi mô bao gồm hai thành phần: tín dụng vi mô cho nam và tín dụng vi mô cho phụ nữ. Chương trình tín dụng vi mô được thực hiện dựa trên sự tham gia tự nguyện của các hộ nghèo nông thôn. Giả sử đơn vị quản lý đã thống nhất về việc áp dụng biến công cụ để đánh giá tác động. Năm đánh giá tác động là 1998. Ước tính tác động của tín dụng vi mô đối với các đối tượng thụ hưởng với các thông tin sau:
+
+Y: giá trị tài sản hộ gia đình bình quân/người
+
+T: biến nhóm (1: nhóm có tham gia dự án tín dụng vi mô dành cho nam hoặc cho nữ)
+
+X: tuổi, trình độ học vấn của chủ hộ
+
+Z: nên chọn biến nào?
+
+Lưu ý: Đối tượng thụ hưởng bao gồm những người tham gia dự án tín dụng vi mô cho nam hoặc dự án tín dụng vi mô cho nữ. Những người không thụ hưởng bao gồm những người không tham gia vào BẤT KỲ dự án tín dụng vi mô nào.
+
+```{r}
+df$taisanbinhquan <- df$hhasset/df$famsize
+hist(df$taisanbinhquan)
+df$ln_taisanbinhquan <- log(df$taisanbinhquan)
+hist(df$ln_taisanbinhquan)
+
+```
+
+Giả sử hộ nam
+
+```{r}
+modelling <- ivreg(ln_taisanbinhquan~agehead+educhead|credit_m|vaccess, data=df)
+summary(modelling)
+```
+
+Kiểm định Wu-Hausman
+
+```         
+Wu-Hausman          1 1124     3.423  0.0646 . 
+```
+
+P-value \< 10% -\> Chọn 2SLS
+
+```         
+credit_m    13.23598   21.25501   0.623    0.534
+```
+
+p-value \> 10%
+
+Không có sự khác biệt trong tsbqdn giữa nhóm hộ có vay tdqm_nam và hộ không có vay tdqm_nam, đôi khi không có tín hiệu xấu

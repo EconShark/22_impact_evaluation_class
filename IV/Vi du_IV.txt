@@ -1,0 +1,10 @@
+Tập tin "Data_demo.xls" chứa dữ liệu được thu thập từ chương trình tín dụng vi mô được thực hiện ở một quốc gia ở Nam Á. Chương trình tín dụng vi mô bao gồm hai thành phần: tín dụng vi mô cho nam và tín dụng vi mô cho phụ nữ. Chương trình tín dụng vi mô được thực hiện dựa trên sự tham gia tự nguyện của các hộ nghèo nông thôn. Giả sử đơn vị quản lý đã thống nhất về việc áp dụng biến công cụ để đánh giá tác động. Năm đánh giá tác động là 1998. Ước tính tác động của tín dụng vi mô đối với các đối tượng thụ hưởng với các thông tin sau:
+
+Y: giá trị tài sản hộ gia đình bình quân/người
+T: biến nhóm (1: nhóm có tham gia dự án tín dụng vi mô dành cho nam hoặc cho nữ)
+X: tuổi, trình độ học vấn của chủ hộ
+Z: nên chọn biến nào?
+
+Lưu ý: Đối tượng thụ hưởng bao gồm những người tham gia dự án tín dụng vi mô cho nam hoặc dự án tín dụng vi mô cho nữ. Những người không thụ hưởng bao gồm những người không tham gia vào BẤT KỲ dự án tín dụng vi mô nào.
+
+

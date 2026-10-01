@@ -1,0 +1,128 @@
+---
+title: "Bài thực hành 4"
+subtitle: "Môn học Đánh giá tác động các chương trình và dự án"
+
+author:
+  - "Lưu Yến Phương - 88244020351"
+  - "Hoàng Thị Hường - 88242020100"
+  - "Nguyễn Thái Thanh Vy - 88243020092"
+  - "Lê Công Thanh - 88244020128"
+
+date: "2026-09-23"
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+
+execute:
+  eval: true
+  warning: false
+  message: false
+---
+
+**GVHD:** TS Lương Vinh Quốc Duy
+
+\newpage
+
+------------------------------------------------------------------------
+
+# Bài thực hành 4
+
+Tình huống tại quốc gia A, nơi có 252 đơn vị hành chính tương đương cấp xã. Do giới hạn về nguồn lực nên quốc gia này chỉ có thể đầu tư hệ thống giao thông công cộng tại một số địa phương nhất định. Giả sử việc lựa chọn địa phương được đầu tư hệ thống giao thông công cộng được thực hiện theo phương pháp ngẫu nhiên. Sau 5 năm, các nhà quản lý muốn có thông tin để trả lời câu hỏi: Việc tồn tại hệ thống giao thông công cộng có tác động như thế nào đến hệ số bất bình đẳng thu nhập (GINI) tại các đơn vị hành chính ở quốc gia A? 
+
+Các nhóm hãy sử dụng phương pháp phù hợp để cung cấp thông tin hỗ trợ việc trả lời câu hỏi trên.
+
+Ghi chú:
+
+\- Cần trình bày rõ các câu lệnh thực hiện và kết quả tính toán tương ứng.
+
+\- Giải thích kết quả tính toán.
+
+\- Sử dụng dữ liệu trong tập tin "data_random.csv"
+
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# Nạp dữ liệu Excel 
+df <- read_excel("data_random.xlsx")
+
+# Lọc quan sát tại thời điểm sau can thiệp (year == 1)
+data_new <- subset(df,year=='1')
+
+cat("Số quan sát sau can thiệp (year = 1):", nrow(data_new), "\n")
+
+# So sánh phân phối: biến gốc và biến biến đổi logarit
+par(mfrow = c(1, 2))
+hist(data_new$GINI, 
+     main = "Histogram of GINI", 
+     xlab = "new_firm", 
+     col = "lightblue", 
+     border = "white")
+
+hist(log(data_new$GINI), 
+     main = "Histogram of ln(GINI)", 
+     xlab = "log(new_firm)", 
+     col = "darkseagreen", 
+     border = "white")
+par(mfrow = c(1, 1))
+```
+
+## Bước 1: Kiểm định Phân phối Chuẩn (Normality Test)
+
+Thiết lập cặp giả thuyết thống kê:
+
+- $H_0$: Biến kết quả tuân theo phân phối chuẩn.
+- $H_1$: Biến kết quả không tuân theo phân phối chuẩn.
+
+```{r}
+# Kiểm định Shapiro-Wilk cho từng nhóm: Đối chứng (transport = 0) và Can thiệp (transport = 1)
+shapiro.test(data_new$GINI[data_new$transport == 0])
+shapiro.test(data_new$GINI[data_new$transport == 1])
+```
+
+**Kết luận:**
+
+- Vì $p\text{-value} < 0.10$: Bác bỏ $H_0 \implies$ Dữ liệu không có phân phối chuẩn.
+- Nếu ít nhất một trong hai nhóm vi phạm phân phối chuẩn ($p < 0.10$) $\longrightarrow$ Chuyển sang **Bước 2B (Non-parametric Path: Kiểm định Phi Tham số)**.
+
+## Bước 2B: Kiểm định Phi Tham số Wilcoxon / Mann-Whitney U
+
+Thiết lập cặp giả thuyết kiểm định so sánh phân phối:
+
+- $H_0: Median_{\text{transport}=1} = Median_{\text{transport}=0}$ (Trung vị của biến kết quả giữa hai nhóm bằng nhau).
+- $H_1: Median_{\text{transport}=1} \neq Median_{\text{transport}=0}$ (Trung vị của biến kết quả giữa hai nhóm có sự khác biệt).
+
+```{r}
+# Thực hiện kiểm định thứ hạng Wilcoxon (Mann-Whitney U)
+wilcox.test(GINI ~ transport, data = data_new)
+```
+
+**Kết luận:**\
+Vì $p\text{-value} > 0.10$, ta chấp nhận $H_0$. Trung vị của hệ số bất bình đẳng thu nhập (GINI) không có sự khác biệt có ý nghĩa thống kê giữa nhóm địa phương có dự án giao thông công cộng và nhóm không có dự án.
+
+### So sánh và Báo cáo Giá trị Trung vị (Medians)
+
+> Vì dữ liệu không tuân theo phân phối chuẩn, kiểm định Wilcoxon đánh giá sự dịch chuyển trên phân vị/thứ hạng thay vì kỳ vọng trung bình. Do đó, việc báo cáo kết quả bắt buộc phải đi kèm giá trị **Trung vị (**$Median$) thay vì Số trung bình ($Mean$).
+
+```{r}
+cat("Trung vị nhóm Đối chứng (transport = 0):", median(data_new$GINI[data_new$transport == 0]), "\n")
+cat("Trung vị nhóm Can thiệp (transport = 1):", median(data_new$GINI[data_new$transport == 1]), "\n")
+```
+
+### Trực quan hóa Phân phối
+
+```{r}
+ggplot(data_new, aes(x = factor(transport), y = GINI)) +
+  geom_boxplot(width = 0.5, outlier.shape = NA, fill = "aliceblue") +
+  geom_jitter(width = 0.1, alpha = 0.5, color = "orange") +
+  labs(
+    x = "Chính sách Giao thông (0 = Không, 1 = Có)",
+    y = "Hệ số bất bình đẳng thu nhập (GINI)",
+    title = "Phân phối hệ số bất bình đẳng thu nhập (GINI) theo Nhóm Chính sách"
+  ) +
+  theme_minimal(base_family = "sans")
+```
